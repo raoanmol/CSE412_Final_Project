@@ -6,20 +6,29 @@ A full-stack web application with a React frontend and Flask backend.
 
 ```
 .
-├── backend/          # Flask backend server
-│   ├── main.py      # Main Flask application
-│   ├── requirements.txt
-│   └── .env.example
-├── frontend/         # React frontend application
+├── backend/              # Flask backend server
+│   ├── Dockerfile       # Backend container configuration
+│   └── main.py          # Main Flask application
+├── frontend/             # React frontend application
+│   ├── Dockerfile       # Frontend container configuration
 │   ├── src/
 │   │   ├── App.jsx
 │   │   ├── main.jsx
-│   │   └── services/
-│   │       └── api.js
+│   │   ├── services/
+│   │   │   └── api.js   # Axios API client
+│   │   ├── App.css
+│   │   └── index.css
 │   ├── package.json
-│   └── vite.config.js
-└── utils/           # Utility scripts
-    └── scraper.py   # ASU Sun Devil Central Events Scraper
+│   ├── vite.config.js
+│   └── index.html
+├── utils/                # Utility scripts
+│   ├── scraper.py       # ASU Sun Devil Central Events Scraper
+│   └── .env.example     # Scraper credentials template
+├── docker-compose.yml    # Docker orchestration
+├── Makefile             # Simple commands for Docker
+├── requirements.txt     # Python dependencies (consolidated)
+├── .gitignore           # Git ignore rules (consolidated)
+└── README.md            # This file
 ```
 
 ## Quick Start
@@ -83,17 +92,24 @@ make help            # See all available commands
      venv\Scripts\activate
      ```
 
-4. Install dependencies:
+4. Install dependencies from the root directory:
    ```bash
+   cd ..
    pip install -r requirements.txt
    ```
 
-5. Run the backend server:
+   Or install from within the backend directory:
    ```bash
+   pip install -r ../requirements.txt
+   ```
+
+5. Run the backend server (make sure you're in the backend directory):
+   ```bash
+   cd backend  # If you went back to root in step 4
    python main.py
    ```
 
-The backend will start on `http://localhost:43798`
+**Note:** When running manually (without Docker), the backend will start on `http://localhost:5000` by default. You'll need to update [backend/main.py:30](backend/main.py#L30) if you want to use port 43798.
 
 #### Frontend Setup
 
@@ -135,6 +151,19 @@ The backend currently includes these example endpoints:
 - Vite proxy configuration forwards `/api` requests to the backend
 - Add new components in `frontend/src/components/`
 
+### Key Design Decisions
+
+**Consolidated Configuration:**
+- **Single [requirements.txt](requirements.txt)** at root - Contains both web scraper and Flask backend dependencies
+- **Single [.gitignore](.gitignore)** at root - Consolidated Python, Node, OS, and IDE ignore rules
+- **Environment variables** set in [docker-compose.yml](docker-compose.yml) - No `.env` files needed for Docker
+- **Build context** set to root in docker-compose - Allows Dockerfiles to access root-level files
+
+**Port Configuration:**
+- Docker: Backend accessible at `localhost:43798` (mapped from internal 5000)
+- Manual: Backend runs on `localhost:5000` by default
+- Frontend always on `localhost:3000`
+
 ---
 
 ## ASU Sun Devil Central Events Scraper
@@ -149,7 +178,7 @@ A Python-based web scraper for fetching event data from ASU Sun Devil Central us
    ```
 
 2. **Configure authentication**:
-   - Copy `.env.example` to `.env`
+   - Copy `utils/.env.example` to `utils/.env`
    - Get your authentication cookies:
      1. Log into [Sun Devil Central](https://sundevilcentral.eoss.asu.edu/events)
      2. Open Browser DevTools (F12)
@@ -158,7 +187,7 @@ A Python-based web scraper for fetching event data from ASU Sun Devil Central us
      5. Find the `mobile_events_list` API call
      6. Right-click → Copy → Copy as cURL
      7. Extract the cookie string from the `-b` flag
-   - Paste the cookie string into `.env`:
+   - Paste the cookie string into `utils/.env`:
      ```
      COOKIE_STRING=your_cookie_string_here
      ```
@@ -207,21 +236,19 @@ The scraper fetches all events (both upcoming and past) and saves them as JSON w
 - Clean, parsed event data structure
 - Progress feedback during scraping
 
-### Project Structure
+### Scraper Setup
 
-```
-.
-├── utils/
-│   └── scraper.py           # Main scraper script
-│   └── .env                 # Your credentials (gitignored)
-│   └── .env.example         # Template for credentials
-├── data/
-│   └── scraped_events.json  # Default output location
-├── requirements.txt         # Python dependencies
-└── README.md                # This file
-```
+The scraper requires authentication cookies which should be placed in `utils/.env`:
+
+1. Copy the template:
+   ```bash
+   cp utils/.env.example utils/.env
+   ```
+
+2. Add your credentials to `utils/.env` (see Configuration section above)
 
 ### Notes
 
-- Authentication cookies expire periodically - you'll need to update `.env` when they do
-- The `.env` file is gitignored to protect your credentials
+- Authentication cookies expire periodically - you'll need to update `utils/.env` when they do
+- The `utils/.env` file is gitignored to protect your credentials
+- The scraper outputs to `data/scraped_events.json` by default (the `data/` directory is also gitignored)
