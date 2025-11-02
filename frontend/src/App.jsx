@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import './App.css'
 import api from './services/api'
+import EventList from './components/EventList'
 
 function App() {
   const [backendStatus, setBackendStatus] = useState(null)
@@ -25,24 +26,20 @@ function App() {
   return (
     <div className="App">
       <header className="App-header">
-        <h1>CSE412 Project</h1>
-        <div className="status-card">
-          <h2>Backend Status</h2>
+        <h1>ASU Sun Devil Central Events</h1>
+        <div className="status-indicator">
           {loading ? (
-            <p>Checking backend connection...</p>
+            <span className="status-loading">Checking connection...</span>
           ) : (
-            <div>
-              <p className={backendStatus.status === 'healthy' ? 'status-healthy' : 'status-error'}>
-                Status: {backendStatus.status}
-              </p>
-              <p>{backendStatus.message}</p>
-            </div>
+            <span className={backendStatus.status === 'healthy' ? 'status-healthy' : 'status-error'}>
+              {backendStatus.status === 'healthy' ? '🟢 Connected' : '🔴 Disconnected'}
+            </span>
           )}
         </div>
-        <p className="instructions">
-          Edit the backend and frontend to add your implementation details
-        </p>
       </header>
+      <main className="App-main">
+        <EventList />
+      </main>
     </div>
   )
 }
