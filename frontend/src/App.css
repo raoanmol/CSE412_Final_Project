@@ -1,0 +1,51 @@
+.App {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.App-header {
+  text-align: center;
+  color: white;
+  padding: 2rem;
+}
+
+h1 {
+  font-size: 3rem;
+  margin-bottom: 2rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.status-card {
+  background: white;
+  color: #333;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  margin: 1rem 0;
+  min-width: 300px;
+}
+
+.status-card h2 {
+  margin-top: 0;
+  color: #667eea;
+}
+
+.status-healthy {
+  color: #22c55e;
+  font-weight: bold;
+}
+
+.status-error {
+  color: #ef4444;
+  font-weight: bold;
+}
+
+.instructions {
+  margin-top: 2rem;
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
