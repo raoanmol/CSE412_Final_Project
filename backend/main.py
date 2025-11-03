@@ -1,70 +1,123 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-import json
-import os
+import database as db
 
 app = Flask(__name__)
 CORS(app)
 
-def load_events():
-    docker_path = '/data/scraped_events.json'
-
-    if os.path.exists(docker_path):
-        events_path = docker_path
-        print(f'Running in Docker, using: {events_path}')
-    else:
-        backend_dir = os.path.dirname(os.path.abspath(__file__))
-        project_root = os.path.dirname(backend_dir)
-        events_path = os.path.join(project_root, 'data', 'scraped_events.json')
-        print(f'Running locally, using: {events_path}')
-
-    print(f'Looking for events at: {events_path}')
-    print(f'File exists: {os.path.exists(events_path)}')
-
-    try:
-        with open(events_path, 'r') as f:
-            data = json.load(f)
-            print(f'Successfully loaded {len(data)} events')
-            return data
-    except Exception as e:
-        print(f'Error loading events: {e}')
-        print(f'Current working directory: {os.getcwd()}')
-        return []
-
-EVENTS_DATA = load_events()
+print('Checking database connection...')
+if db.check_database_connection():
+    print('✓ Database connection successful!')
+    stats = db.get_database_stats()
+    print(f'✓ Database has {stats["total_events"]} events and {stats["total_clubs"]} clubs')
+else:
+    print('✗ Warning: Database connection failed!')
+    print('  Make sure PostgreSQL is running and DATABASE_URL is set correctly')
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
-    return jsonify({'status': 'healthy', 'message': 'Backend is running!'})
+    '''Health check endpoint with database status.'''
+    db_connected = db.check_database_connection()
+
+    response = {
+        'status': 'healthy' if db_connected else 'degraded',
+        'message': 'Backend is running!',
+        'database': 'connected' if db_connected else 'disconnected'
+    }
+
+    if db_connected:
+        try:
+            stats = db.get_database_stats()
+            response['stats'] = stats
+        except Exception as e:
+            response['database'] = 'error'
+            response['error'] = str(e)
+
+    return jsonify(response)
 
 @app.route('/api/events', methods=['GET'])
 def get_events():
-    page = request.args.get('page', 1, type=int)
-    limit = request.args.get('limit', 20, type=int)
+    '''
+    Get paginated events from database.
 
-    if page < 1:
-        page = 1
-    if limit < 1 or limit > 100:
-        limit = 20
+    Query parameters:
+        - page: Page number (default: 1)
+        - limit: Events per page (default: 20, max: 100)
+        - category: Filter by category (optional)
+        - search: Search in event names (optional)
+    '''
+    try:
+        page = request.args.get('page', 1, type=int)
+        limit = request.args.get('limit', 20, type=int)
+        category = request.args.get('category', None, type=str)
+        search = request.args.get('search', None, type=str)
 
-    start_idx = (page - 1) * limit
-    end_idx = start_idx + limit
+        result = db.get_events_paginated(
+            page=page,
+            limit=limit,
+            category=category,
+            search=search
+        )
 
-    paginated_events = EVENTS_DATA[start_idx:end_idx]
+        return jsonify(result)
 
-    total_events = len(EVENTS_DATA)
-    total_pages = (total_events + limit - 1) // limit
+    except Exception as e:
+        return jsonify({
+            'error': 'Failed to fetch events',
+            'message': str(e)
+        }), 500
 
-    return jsonify({
-        'events': paginated_events,
-        'pagination': {
-            'current_page': page,
-            'total_pages': total_pages,
-            'total_events': total_events,
-            'limit': limit,
-            'has_more': end_idx < total_events
-        }
-    })
+@app.route('/api/events/<event_id>', methods=['GET'])
+def get_event_by_id(event_id):
+    '''Get a single event by its ID.'''
+    try:
+        event = db.get_event_by_id(event_id)
+
+        if event:
+            return jsonify(event)
+        else:
+            return jsonify({
+                'error': 'Event not found',
+                'message': f'No event found with ID: {event_id}'
+            }), 404
+
+    except Exception as e:
+        return jsonify({
+            'error': 'Failed to fetch event',
+            'message': str(e)
+        }), 500
+
+
+@app.route('/api/categories', methods=['GET'])
+def get_categories():
+    '''Get all unique event categories.'''
+    try:
+        categories = db.get_categories()
+        return jsonify({
+            'categories': categories,
+            'count': len(categories)
+        })
+
+    except Exception as e:
+        return jsonify({
+            'error': 'Failed to fetch categories',
+            'message': str(e)
+        }), 500
+
+
+@app.route('/api/stats', methods=['GET'])
+def get_stats():
+    '''Get database statistics.'''
+    try:
+        stats = db.get_database_stats()
+        return jsonify(stats)
+
+    except Exception as e:
+        return jsonify({
+            'error': 'Failed to fetch statistics',
+            'message': str(e)
+        }), 500
+
 
 @app.route('/api/example', methods=['GET'])
 def get_example():
@@ -72,6 +125,7 @@ def get_example():
         'message': 'This is an example GET endpoint',
         'data': []
     })
+
 
 @app.route('/api/example', methods=['POST'])
 def post_example():

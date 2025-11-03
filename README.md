@@ -7,8 +7,10 @@ A full-stack web application with a React frontend and Flask backend.
 ```
 .
 ├── backend/              # Flask backend server
+|   ├── database.py      # SQL commads to query PostgreSQL database
 │   ├── Dockerfile       # Backend container configuration
-│   └── main.py          # Main Flask application
+|   ├── main.py          # Main Flask application
+│   └── startup.sh       # Backend startup script (populates database too)
 ├── frontend/             # React frontend application
 │   ├── Dockerfile       # Frontend container configuration
 │   ├── src/
@@ -21,10 +23,13 @@ A full-stack web application with a React frontend and Flask backend.
 │   ├── package.json
 │   ├── vite.config.js
 │   └── index.html
+├── database/             # Database scripts and schema
+│   ├── init.sql         # PostgreSQL schema initialization
+│   └── load_data.py     # Script to load JSON data into database
 ├── utils/                # Utility scripts
 │   ├── scraper.py       # ASU Sun Devil Central Events Scraper
 │   └── .env.example     # Scraper credentials template
-├── docker-compose.yml    # Docker orchestration
+├── docker-compose.yml    # Docker orchestration (includes PostgreSQL)
 ├── Makefile             # Simple commands for Docker
 ├── requirements.txt     # Python dependencies (consolidated)
 ├── .gitignore           # Git ignore rules (consolidated)
@@ -43,30 +48,42 @@ A full-stack web application with a React frontend and Flask backend.
    ```
 
 That's it! The command will:
-- Build Docker images for both frontend and backend
-- Start both containers
+- Build Docker images for frontend, backend, and database
+- Start all three containers
 - Set up networking between them
+- Initialize the PostgreSQL database with schema
+- **Automatically load scraped data if database is empty**
 - Frontend will be available at `http://localhost:3000`
 - Backend will be available at `http://localhost:43798`
+- Database will be available at `localhost:5433` (external port to avoid conflicts)
+
+**Note:** The backend automatically checks if the database is empty on startup. If it is, it will load data from `data/scraped_events.json`. You can also manually reload data anytime with:
+```bash
+make db-load
+```
 
 **Other useful commands:**
 ```bash
 make down            # Stop the application
-make logs            # View logs from both containers
+make logs            # View logs from all containers
 make logs-backend    # View only backend logs
 make logs-frontend   # View only frontend logs
+make logs-db         # View only database logs
 make restart         # Restart the application
 make build           # Rebuild containers (use after changing dependencies)
 make clean           # Remove all containers and volumes
+make db-connect      # Connect to database with psql
+make db-reset        # Reset database (WARNING: deletes all data)
 make help            # See all available commands
 ```
 
 **How it works:**
-- Docker creates isolated "containers" (like lightweight virtual machines) for your frontend and backend
+- Docker creates isolated "containers" (like lightweight virtual machines) for your frontend, backend, and database
 - Each container has its own environment with all dependencies installed
 - The containers can talk to each other through a virtual network
 - Your code is "mounted" into the containers, so changes you make are reflected immediately (hot-reload)
-- No need to install Python, Node, or any dependencies on your machine!
+- The PostgreSQL database persists data in a Docker volume (survives container restarts)
+- No need to install Python, Node, PostgreSQL, or any dependencies on your machine!
 
 ### Option 2: Manual Setup (Without Docker)
 
@@ -130,11 +147,91 @@ make help            # See all available commands
 
 The frontend will start on `http://localhost:3000`
 
+## Database
+
+The application uses PostgreSQL to store events and clubs data.
+
+### Database Schema
+
+**Tables:**
+- `clubs` - Student clubs and organizations
+  - `club_id` (PRIMARY KEY)
+  - `club_login`
+  - `club_name`
+  - `created_at`, `updated_at`
+
+- `events` - Events hosted by clubs
+  - `event_id` (PRIMARY KEY)
+  - `event_uid` (UNIQUE)
+  - `name`, `dates`, `category`, `location`
+  - `club_id` (FOREIGN KEY → clubs)
+  - `attendees`, `picture_url`, `price_range`
+  - `button_label`, `badges`, `event_url`
+  - `timezone`, `aria_details`
+  - `created_at`, `updated_at`
+
+**Views:**
+- `events_with_clubs` - Joins events with their associated club information
+
+### Database Commands
+
+```bash
+# Load scraped data into database
+make db-load
+
+# Connect to database with psql
+make db-connect
+
+# View database logs
+make logs-db
+
+# Reset database (deletes all data)
+make db-reset
+```
+
+### Database Configuration
+
+When running with Docker:
+- **Host:** `localhost` (from your machine) or `db` (from backend container)
+- **Port:** `5433` (external), `5432` (internal container port)
+- **Database:** `asu_events`
+- **User:** `postgres`
+- **Password:** `postgres`
+- **Connection String (from host):** `postgresql://postgres:postgres@localhost:5433/asu_events`
+- **Connection String (from backend):** `postgresql://postgres:postgres@db:5432/asu_events`
+
+**Note:** The database is exposed on port 5433 externally to avoid conflicts with any local PostgreSQL instance you might have running on port 5432. Inside the Docker network, containers communicate on the standard port 5432.
+
 ## API Endpoints
 
-The backend currently includes these example endpoints:
+The backend provides the following REST API endpoints:
 
-- `GET /api/health` - Health check endpoint
+### Events
+- `GET /api/events` - Get paginated events
+  - Query parameters:
+    - `page` (int, default: 1) - Page number
+    - `limit` (int, default: 20, max: 100) - Events per page
+    - `category` (string, optional) - Filter by category
+    - `search` (string, optional) - Search in event names
+  - Example: `/api/events?page=1&limit=20&category=Social&search=gaming`
+
+- `GET /api/events/<event_id>` - Get a single event by ID
+  - Returns 404 if event not found
+
+### Categories
+- `GET /api/categories` - Get all unique event categories
+  - Returns list of categories and count
+
+### Statistics
+- `GET /api/stats` - Get database statistics
+  - Returns total events, clubs, and category breakdown
+
+### Health Check
+- `GET /api/health` - Health check with database status
+  - Returns backend status and database connection info
+  - Includes database statistics if connected
+
+### Example Endpoints
 - `GET /api/example` - Example GET endpoint
 - `POST /api/example` - Example POST endpoint
 
@@ -143,7 +240,9 @@ The backend currently includes these example endpoints:
 ### Backend
 - The Flask server runs on port 43798 (mapped from internal port 5000 in Docker)
 - CORS is enabled for cross-origin requests
+- Database queries are handled through [backend/database.py](backend/database.py)
 - Add new routes in [backend/main.py](backend/main.py)
+- All data is now served from PostgreSQL database
 
 ### Frontend
 - Built with React and Vite

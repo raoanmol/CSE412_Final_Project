@@ -2,6 +2,30 @@
 version: '3.8'
 
 services:
+  db:
+    image: postgres:16-alpine
+    container_name: cse412-db
+
+    ports:
+      - "5433:5432"
+
+    environment:
+      - POSTGRES_DB=asu_events
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   backend:
     build:
       context: .
@@ -15,11 +39,17 @@ services:
     volumes:
       - ./backend:/app
       - ./data:/data
+      - ./database:/database
       - /app/__pycache__
 
     environment:
       - FLASK_ENV=development
       - FLASK_DEBUG=1
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/asu_events
+
+    depends_on:
+      db:
+        condition: service_healthy
 
     restart: unless-stopped
 
@@ -52,6 +82,9 @@ services:
       - DOCKER_ENV=true
 
     restart: unless-stopped
+
+volumes:
+  postgres_data:
 
 networks:
   default:
