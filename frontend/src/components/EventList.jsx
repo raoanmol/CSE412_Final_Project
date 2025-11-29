@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import EventCard from './EventCard'
+import FilterBar from './FilterBar'
 import api from '../services/api'
 import './EventList.css'
 
@@ -10,6 +11,7 @@ function EventList() {
   const [hasMore, setHasMore] = useState(true)
   const [error, setError] = useState(null)
   const [totalEvents, setTotalEvents] = useState(0)
+  const [filters, setFilters] = useState({})
 
   const observer = useRef()
   const lastEventElementRef = useCallback(
@@ -28,17 +30,24 @@ function EventList() {
     [loading, hasMore]
   )
 
-  const fetchEvents = async (pageNum) => {
+  const fetchEvents = async (pageNum, currentFilters) => {
     try {
       setLoading(true)
       setError(null)
 
-      const response = await api.get('/events', {
-        params: {
-          page: pageNum,
-          limit: 20,
-        },
-      })
+      const params = {
+        page: pageNum,
+        limit: 20,
+      }
+
+      if (currentFilters.search) params.search = currentFilters.search
+      if (currentFilters.category) params.category = currentFilters.category.join(',')
+      if (currentFilters.organization) params.organization = currentFilters.organization.join(',')
+      if (currentFilters.event_type) params.event_type = currentFilters.event_type
+      if (currentFilters.start_date) params.start_date = currentFilters.start_date
+      if (currentFilters.end_date) params.end_date = currentFilters.end_date
+
+      const response = await api.get('/events', { params })
 
       const { events: newEvents, pagination } = response.data
 
@@ -59,9 +68,19 @@ function EventList() {
     }
   }
 
+  // Fetch events when page changes
   useEffect(() => {
-    fetchEvents(page)
+    fetchEvents(page, filters)
   }, [page])
+
+  // Reset and fetch when filters change
+  const handleFilterChange = useCallback((newFilters) => {
+    setFilters(newFilters)
+    setEvents([])
+    setPage(1)
+    setHasMore(true)
+    fetchEvents(1, newFilters)
+  }, [])
 
   const handleRetry = () => {
     setError(null)
@@ -89,6 +108,8 @@ function EventList() {
           Showing {events.length} of {totalEvents} events
         </p>
       </div>
+
+      <FilterBar onFilterChange={handleFilterChange} />
 
       <div className="event-list">
         {events.map((event, index) => {

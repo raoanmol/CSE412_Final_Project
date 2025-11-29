@@ -43,20 +43,40 @@ def get_events():
     Query parameters:
         - page: Page number (default: 1)
         - limit: Events per page (default: 20, max: 100)
-        - category: Filter by category (optional)
+        - category: Filter by category (optional, can be comma-separated list)
         - search: Search in event names (optional)
+        - event_type: Filter by event type (in_person, online, hybrid) (optional)
+        - start_date: Filter events after this date (ISO format) (optional)
+        - end_date: Filter events before this date (ISO format) (optional)
+        - organization: Filter by organization ID (optional, can be comma-separated list)
     '''
     try:
         page = request.args.get('page', 1, type=int)
         limit = request.args.get('limit', 20, type=int)
-        category = request.args.get('category', None, type=str)
         search = request.args.get('search', None, type=str)
+        event_type = request.args.get('event_type', None, type=str)
+        start_date = request.args.get('start_date', None, type=str)
+        end_date = request.args.get('end_date', None, type=str)
+
+        # Handle comma-separated categories
+        category = request.args.get('category', None, type=str)
+        if category:
+            category = [c.strip() for c in category.split(',')]
+
+        # Handle comma-separated organizations
+        organization = request.args.get('organization', None, type=str)
+        if organization:
+            organization = [o.strip() for o in organization.split(',')]
 
         result = db.get_events_paginated(
             page=page,
             limit=limit,
             category=category,
-            search=search
+            search=search,
+            event_type=event_type,
+            start_date=start_date,
+            end_date=end_date,
+            organization=organization
         )
 
         return jsonify(result)
@@ -101,6 +121,23 @@ def get_categories():
     except Exception as e:
         return jsonify({
             'error': 'Failed to fetch categories',
+            'message': str(e)
+        }), 500
+
+
+@app.route('/api/organizations', methods=['GET'])
+def get_organizations():
+    '''Get all organizations.'''
+    try:
+        organizations = db.get_organizations()
+        return jsonify({
+            'organizations': organizations,
+            'count': len(organizations)
+        })
+
+    except Exception as e:
+        return jsonify({
+            'error': 'Failed to fetch organizations',
             'message': str(e)
         }), 500
 

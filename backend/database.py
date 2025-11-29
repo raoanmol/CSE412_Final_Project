@@ -66,15 +66,20 @@ def get_db_cursor(cursor_factory=RealDictCursor):
             cursor.close()
 
 
-def get_events_paginated(page=1, limit=20, category=None, search=None):
+def get_events_paginated(page=1, limit=20, category=None, search=None, event_type=None,
+                         start_date=None, end_date=None, organization=None):
     '''
     Get paginated events from the database.
 
     Args:
         page (int): Page number (1-indexed)
         limit (int): Number of events per page
-        category (str): Optional category filter
+        category (str or list): Optional category filter(s)
         search (str): Optional search term for event names
+        event_type (str): Optional event type filter (in_person, online, hybrid)
+        start_date (str): Optional start date filter (ISO format)
+        end_date (str): Optional end date filter (ISO format)
+        organization (str or list): Optional organization filter(s)
 
     Returns:
         dict: Dictionary containing:
@@ -91,19 +96,50 @@ def get_events_paginated(page=1, limit=20, category=None, search=None):
     where_clauses = []
     params = []
 
+    # Category filter
     if category:
-        where_clauses.append('category = %s')
-        params.append(category)
+        if isinstance(category, list):
+            placeholders = ','.join(['%s'] * len(category))
+            where_clauses.append(f'category IN ({placeholders})')
+            params.extend(category)
+        else:
+            where_clauses.append('category = %s')
+            params.append(category)
 
+    # Text search
     if search:
         where_clauses.append('event_name ILIKE %s')
         params.append(f'%{search}%')
+
+    # Event type filter
+    if event_type:
+        where_clauses.append('event_type = %s')
+        params.append(event_type)
+
+    # Date range filter
+    if start_date:
+        where_clauses.append('event_start_datetime >= %s')
+        params.append(start_date)
+
+    if end_date:
+        where_clauses.append('event_start_datetime <= %s')
+        params.append(end_date)
+
+    # Organization filter
+    if organization:
+        if isinstance(organization, list):
+            placeholders = ','.join(['%s'] * len(organization))
+            where_clauses.append(f'e.org_id IN ({placeholders})')
+            params.extend(organization)
+        else:
+            where_clauses.append('e.org_id = %s')
+            params.append(organization)
 
     where_sql = ''
     if where_clauses:
         where_sql = 'WHERE ' + ' AND '.join(where_clauses)
 
-    count_query = f'SELECT COUNT(*) as total FROM events {where_sql}'
+    count_query = f'SELECT COUNT(*) as total FROM events e {where_sql}'
 
     events_query = f'''
         SELECT
@@ -222,6 +258,25 @@ def get_categories():
         cursor.execute(query)
         categories = cursor.fetchall()
         return [cat['category'] for cat in categories]
+
+
+def get_organizations():
+    '''
+    Get all organizations.
+
+    Returns:
+        list: List of organization dictionaries
+    '''
+    query = '''
+        SELECT org_id, org_login, org_name
+        FROM organizations
+        ORDER BY org_name
+    '''
+
+    with get_db_cursor() as cursor:
+        cursor.execute(query)
+        organizations = cursor.fetchall()
+        return [dict(org) for org in organizations]
 
 
 def get_database_stats():
