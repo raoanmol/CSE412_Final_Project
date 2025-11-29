@@ -279,6 +279,56 @@ def get_organizations():
         return [dict(org) for org in organizations]
 
 
+def get_organizations_with_stats(search=None, sort_by=None):
+    '''
+    Get organizations with their statistics (event count, member count, officer count).
+
+    Args:
+        search (str): Optional search term for organization name
+        sort_by (str): Optional sort field ('events', 'members', 'officers', 'name')
+
+    Returns:
+        list: List of organization dictionaries with stats
+    '''
+    where_clause = ''
+    params = []
+
+    if search:
+        where_clause = 'WHERE o.org_name ILIKE %s'
+        params.append(f'%{search}%')
+
+    # Determine sort order
+    order_by = 'o.org_name'  # default
+    if sort_by == 'events':
+        order_by = 'event_count DESC NULLS LAST, o.org_name'
+    elif sort_by == 'members':
+        order_by = 'member_count DESC NULLS LAST, o.org_name'
+    elif sort_by == 'officers':
+        order_by = 'officer_count DESC NULLS LAST, o.org_name'
+
+    query = f'''
+        SELECT
+            o.org_id,
+            o.org_login,
+            o.org_name,
+            COUNT(DISTINCT e.event_id) as event_count,
+            COUNT(DISTINCT so.student_id) as member_count,
+            COUNT(DISTINCT sof.student_id) as officer_count
+        FROM organizations o
+        LEFT JOIN events e ON o.org_id = e.org_id
+        LEFT JOIN student_organizations so ON o.org_id = so.org_id
+        LEFT JOIN student_officers sof ON o.org_id = sof.org_id
+        {where_clause}
+        GROUP BY o.org_id, o.org_login, o.org_name
+        ORDER BY {order_by}
+    '''
+
+    with get_db_cursor() as cursor:
+        cursor.execute(query, params)
+        organizations = cursor.fetchall()
+        return [dict(org) for org in organizations]
+
+
 def get_database_stats():
     '''
     Get database statistics.

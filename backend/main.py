@@ -127,9 +127,24 @@ def get_categories():
 
 @app.route('/api/organizations', methods=['GET'])
 def get_organizations():
-    '''Get all organizations.'''
+    '''
+    Get all organizations with optional stats.
+
+    Query parameters:
+        - with_stats: Include event/member/officer counts (default: false)
+        - search: Filter by organization name (optional)
+        - sort_by: Sort by field (events, members, officers, name) (optional)
+    '''
     try:
-        organizations = db.get_organizations()
+        with_stats = request.args.get('with_stats', 'false').lower() == 'true'
+
+        if with_stats:
+            search = request.args.get('search', None, type=str)
+            sort_by = request.args.get('sort_by', None, type=str)
+            organizations = db.get_organizations_with_stats(search=search, sort_by=sort_by)
+        else:
+            organizations = db.get_organizations()
+
         return jsonify({
             'organizations': organizations,
             'count': len(organizations)

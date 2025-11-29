@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react'
 import './App.css'
 import api from './services/api'
 import EventList from './components/EventList'
+import OrganizationList from './components/OrganizationList'
 
 function App() {
   const [backendStatus, setBackendStatus] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState('events')
 
   useEffect(() => {
     checkBackendHealth()
@@ -26,7 +28,7 @@ function App() {
   return (
     <div className="App">
       <header className="App-header">
-        <h1>ASU Sun Devil Central Events</h1>
+        <h1>ASU Sun Devil Central</h1>
         <div className="status-indicator">
           {loading ? (
             <span className="status-loading">Checking connection...</span>
@@ -37,8 +39,24 @@ function App() {
           )}
         </div>
       </header>
+
+      <nav className="tab-navigation">
+        <button
+          className={`tab-button ${activeTab === 'events' ? 'active' : ''}`}
+          onClick={() => setActiveTab('events')}
+        >
+          Events
+        </button>
+        <button
+          className={`tab-button ${activeTab === 'organizations' ? 'active' : ''}`}
+          onClick={() => setActiveTab('organizations')}
+        >
+          Organizations
+        </button>
+      </nav>
+
       <main className="App-main">
-        <EventList />
+        {activeTab === 'events' ? <EventList /> : <OrganizationList />}
       </main>
     </div>
   )
