@@ -9,7 +9,7 @@ print('Checking database connection...')
 if db.check_database_connection():
     print('✓ Database connection successful!')
     stats = db.get_database_stats()
-    print(f'✓ Database has {stats["total_events"]} events and {stats["total_clubs"]} clubs')
+    print(f'✓ Database has {stats["total_events"]} events and {stats["total_organizations"]} organizations')
 else:
     print('✗ Warning: Database connection failed!')
     print('  Make sure PostgreSQL is running and DATABASE_URL is set correctly')

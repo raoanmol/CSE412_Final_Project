@@ -96,7 +96,7 @@ def get_events_paginated(page=1, limit=20, category=None, search=None):
         params.append(category)
 
     if search:
-        where_clauses.append('name ILIKE %s')
+        where_clauses.append('event_name ILIKE %s')
         params.append(f'%{search}%')
 
     where_sql = ''
@@ -109,10 +109,15 @@ def get_events_paginated(page=1, limit=20, category=None, search=None):
         SELECT
             e.event_id,
             e.event_uid,
-            e.name,
-            e.dates,
+            e.event_name,
+            e.event_description,
+            e.event_start_datetime,
+            e.event_end_datetime,
+            e.original_date_string,
             e.category,
-            e.location,
+            e.location_text,
+            e.online_link,
+            e.event_type,
             e.attendees,
             e.picture_url,
             e.price_range,
@@ -121,13 +126,13 @@ def get_events_paginated(page=1, limit=20, category=None, search=None):
             e.event_url,
             e.timezone,
             e.aria_details,
-            c.club_id,
-            c.club_login,
-            c.club_name
+            o.org_id,
+            o.org_login,
+            o.org_name
         FROM events e
-        LEFT JOIN clubs c ON e.club_id = c.club_id
+        LEFT JOIN organizations o ON e.org_id = o.org_id
         {where_sql}
-        ORDER BY e.event_id
+        ORDER BY e.event_start_datetime DESC NULLS LAST, e.event_id
         LIMIT %s OFFSET %s
     '''
 
@@ -168,10 +173,15 @@ def get_event_by_id(event_id):
         SELECT
             e.event_id,
             e.event_uid,
-            e.name,
-            e.dates,
+            e.event_name,
+            e.event_description,
+            e.event_start_datetime,
+            e.event_end_datetime,
+            e.original_date_string,
             e.category,
-            e.location,
+            e.location_text,
+            e.online_link,
+            e.event_type,
             e.attendees,
             e.picture_url,
             e.price_range,
@@ -180,11 +190,11 @@ def get_event_by_id(event_id):
             e.event_url,
             e.timezone,
             e.aria_details,
-            c.club_id,
-            c.club_login,
-            c.club_name
+            o.org_id,
+            o.org_login,
+            o.org_name
         FROM events e
-        LEFT JOIN clubs c ON e.club_id = c.club_id
+        LEFT JOIN organizations o ON e.org_id = o.org_id
         WHERE e.event_id = %s
     '''
 
@@ -219,14 +229,14 @@ def get_database_stats():
     Get database statistics.
 
     Returns:
-        dict: Statistics including counts of events, clubs, and categories
+        dict: Statistics including counts of events, organizations, categories, and event types
     '''
     with get_db_cursor() as cursor:
         cursor.execute('SELECT COUNT(*) as count FROM events')
         event_count = cursor.fetchone()['count']
 
-        cursor.execute('SELECT COUNT(*) as count FROM clubs')
-        club_count = cursor.fetchone()['count']
+        cursor.execute('SELECT COUNT(*) as count FROM organizations')
+        org_count = cursor.fetchone()['count']
 
         cursor.execute('''
             SELECT category, COUNT(*) as count
@@ -237,10 +247,20 @@ def get_database_stats():
         ''')
         categories = cursor.fetchall()
 
+        cursor.execute('''
+            SELECT event_type, COUNT(*) as count
+            FROM events
+            WHERE event_type IS NOT NULL
+            GROUP BY event_type
+            ORDER BY count DESC
+        ''')
+        event_types = cursor.fetchall()
+
     return {
         'total_events': event_count,
-        'total_clubs': club_count,
-        'categories': [dict(cat) for cat in categories]
+        'total_organizations': org_count,
+        'categories': [dict(cat) for cat in categories],
+        'event_types': [dict(et) for et in event_types]
     }
 
 

@@ -1,11 +1,11 @@
 -- Database initialization script for ASU Events
--- This script creates the schema for storing events and clubs
+-- This script creates the schema for storing events and organizations
 
--- Create clubs table
-CREATE TABLE IF NOT EXISTS clubs (
-    club_id VARCHAR(50) PRIMARY KEY,
-    club_login VARCHAR(255),
-    club_name VARCHAR(255) NOT NULL,
+-- Create organizations table
+CREATE TABLE IF NOT EXISTS organizations (
+    org_id VARCHAR(50) PRIMARY KEY,
+    org_login VARCHAR(255),
+    org_name VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -14,11 +14,16 @@ CREATE TABLE IF NOT EXISTS clubs (
 CREATE TABLE IF NOT EXISTS events (
     event_id VARCHAR(50) PRIMARY KEY,
     event_uid VARCHAR(255) UNIQUE,
-    name VARCHAR(500) NOT NULL,
-    dates TEXT,
+    event_name VARCHAR(500) NOT NULL,
+    event_description TEXT,
+    event_start_datetime TIMESTAMP,
+    event_end_datetime TIMESTAMP,
+    original_date_string TEXT,
     category VARCHAR(100),
-    location TEXT,
-    club_id VARCHAR(50),
+    location_text VARCHAR(500),
+    online_link TEXT,
+    event_type VARCHAR(20) CHECK (event_type IN ('in_person', 'online', 'hybrid')),
+    org_id VARCHAR(50),
     attendees INTEGER DEFAULT 0,
     picture_url TEXT,
     price_range VARCHAR(100),
@@ -29,14 +34,15 @@ CREATE TABLE IF NOT EXISTS events (
     aria_details TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (club_id) REFERENCES clubs(club_id) ON DELETE SET NULL
+    FOREIGN KEY (org_id) REFERENCES organizations(org_id) ON DELETE SET NULL
 );
 
 -- Create indexes for better query performance
-CREATE INDEX IF NOT EXISTS idx_events_club_id ON events(club_id);
+CREATE INDEX IF NOT EXISTS idx_events_org_id ON events(org_id);
 CREATE INDEX IF NOT EXISTS idx_events_category ON events(category);
-CREATE INDEX IF NOT EXISTS idx_events_name ON events(name);
-CREATE INDEX IF NOT EXISTS idx_events_dates ON events(dates);
+CREATE INDEX IF NOT EXISTS idx_events_name ON events(event_name);
+CREATE INDEX IF NOT EXISTS idx_events_start_datetime ON events(event_start_datetime);
+CREATE INDEX IF NOT EXISTS idx_events_event_type ON events(event_type);
 
 -- Create a function to update the updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -48,21 +54,26 @@ END;
 $$ language 'plpgsql';
 
 -- Create triggers to automatically update updated_at
-CREATE TRIGGER update_clubs_updated_at BEFORE UPDATE ON clubs
+CREATE TRIGGER update_organizations_updated_at BEFORE UPDATE ON organizations
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_events_updated_at BEFORE UPDATE ON events
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- Create a view for events with full club information
-CREATE OR REPLACE VIEW events_with_clubs AS
+-- Create a view for events with full organization information
+CREATE OR REPLACE VIEW events_with_organizations AS
 SELECT
     e.event_id,
     e.event_uid,
-    e.name,
-    e.dates,
+    e.event_name,
+    e.event_description,
+    e.event_start_datetime,
+    e.event_end_datetime,
+    e.original_date_string,
     e.category,
-    e.location,
+    e.location_text,
+    e.online_link,
+    e.event_type,
     e.attendees,
     e.picture_url,
     e.price_range,
@@ -71,19 +82,19 @@ SELECT
     e.event_url,
     e.timezone,
     e.aria_details,
-    c.club_id,
-    c.club_login,
-    c.club_name,
+    o.org_id,
+    o.org_login,
+    o.org_name,
     e.created_at,
     e.updated_at
 FROM events e
-LEFT JOIN clubs c ON e.club_id = c.club_id;
+LEFT JOIN organizations o ON e.org_id = o.org_id;
 
 -- Output success message
 DO $$
 BEGIN
     RAISE NOTICE 'Database schema initialized successfully!';
-    RAISE NOTICE 'Created tables: clubs, events';
+    RAISE NOTICE 'Created tables: organizations, events';
     RAISE NOTICE 'Created indexes for performance optimization';
-    RAISE NOTICE 'Created view: events_with_clubs';
+    RAISE NOTICE 'Created view: events_with_organizations';
 END $$;

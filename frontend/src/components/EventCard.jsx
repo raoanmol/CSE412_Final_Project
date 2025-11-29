@@ -1,11 +1,37 @@
 import './EventCard.css'
 
 function EventCard({ event }) {
-  // Parse the HTML dates to extract readable text
-  const parseDates = (datesHtml) => {
-    const tempDiv = document.createElement('div')
-    tempDiv.innerHTML = datesHtml
-    return tempDiv.textContent || datesHtml
+  // Format datetime for display
+  const formatDateTime = (startDatetime, endDatetime, originalDateString) => {
+    if (startDatetime) {
+      const start = new Date(startDatetime)
+      const options = {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit'
+      }
+      let formatted = start.toLocaleDateString('en-US', options)
+
+      if (endDatetime) {
+        const end = new Date(endDatetime)
+        const timeOptions = { hour: 'numeric', minute: '2-digit' }
+        formatted += ` – ${end.toLocaleTimeString('en-US', timeOptions)}`
+      }
+
+      return formatted
+    }
+
+    // Fallback to original date string if parsed datetime not available
+    if (originalDateString) {
+      const tempDiv = document.createElement('div')
+      tempDiv.innerHTML = originalDateString
+      return tempDiv.textContent || originalDateString
+    }
+
+    return 'undefined'
   }
 
   // Clean up badges HTML
@@ -14,23 +40,6 @@ function EventCard({ event }) {
     const tempDiv = document.createElement('div')
     tempDiv.innerHTML = badgesHtml
     return tempDiv.textContent || ''
-  }
-
-  // Parse location and extract zoom link if present
-  const parseLocation = (locationHtml) => {
-    if (!locationHtml) return { text: '', zoomLink: null }
-
-    const tempDiv = document.createElement('div')
-    tempDiv.innerHTML = locationHtml
-
-    // Extract zoom link if present
-    const link = tempDiv.querySelector('a[href*="zoom.us"]')
-    const zoomLink = link ? link.href : null
-
-    // Get the text content (location name)
-    const locationText = tempDiv.textContent || locationHtml
-
-    return { text: locationText.replace('Zoom link', '').trim(), zoomLink }
   }
 
   const handleEventClick = () => {
@@ -44,15 +53,13 @@ function EventCard({ event }) {
     window.open(zoomLink, '_blank', 'noopener,noreferrer')
   }
 
-  const locationInfo = parseLocation(event.location)
-
   return (
     <div className="event-card" onClick={handleEventClick}>
       <div className="event-image">
         {event.picture_url && (
           <img
             src={`https://sundevilcentral.eoss.asu.edu${event.picture_url}`}
-            alt={event.name}
+            alt={event.event_name || event.name}
             onError={(e) => {
               e.target.src = 'https://via.placeholder.com/300x200?text=Event+Image'
             }}
@@ -65,25 +72,31 @@ function EventCard({ event }) {
         )}
       </div>
       <div className="event-content">
-        <h3 className="event-title">{event.name}</h3>
+        <h3 className="event-title">{event.event_name || event.name}</h3>
         <div className="event-meta">
           <div className="event-date">
             <span className="icon">📅</span>
-            <span>{parseDates(event.dates)}</span>
+            <span>
+              {formatDateTime(
+                event.event_start_datetime,
+                event.event_end_datetime,
+                event.original_date_string
+              )}
+            </span>
           </div>
-          {event.location && (
+          {(event.location_text || event.online_link) && (
             <div className="event-location">
               <span className="icon">📍</span>
-              <span>{locationInfo.text}</span>
-              {locationInfo.zoomLink && (
+              <span>{event.location_text || 'Online'}</span>
+              {event.online_link && (
                 <a
-                  href={locationInfo.zoomLink}
+                  href={event.online_link}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="zoom-link"
-                  onClick={(e) => handleZoomClick(e, locationInfo.zoomLink)}
+                  onClick={(e) => handleZoomClick(e, event.online_link)}
                 >
-                  🔗 Zoom Link
+                  🔗 {event.event_type === 'hybrid' ? 'Zoom Link' : 'Join Online'}
                 </a>
               )}
             </div>
@@ -95,13 +108,13 @@ function EventCard({ event }) {
         </div>
         <div className="event-club">
           <span className="icon">👥</span>
-          <span>{event.club_name}</span>
+          <span>{event.org_name || event.club_name}</span>
         </div>
         <div className="event-footer">
           {event.price_range && (
             <span className="event-price">{event.price_range}</span>
           )}
-          {event.attendees && (
+          {event.attendees > 0 && (
             <span className="event-attendees">
               {event.attendees} attendees
             </span>
