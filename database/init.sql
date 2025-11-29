@@ -60,6 +60,48 @@ CREATE TRIGGER update_organizations_updated_at BEFORE UPDATE ON organizations
 CREATE TRIGGER update_events_updated_at BEFORE UPDATE ON events
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+-- Create students table
+CREATE TABLE IF NOT EXISTS students (
+    student_id VARCHAR(10) PRIMARY KEY,
+    student_name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    major VARCHAR(100),
+    year INTEGER CHECK (year >= 1 AND year <= 5),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create student_organizations junction table (many-to-many relationship)
+CREATE TABLE IF NOT EXISTS student_organizations (
+    student_id VARCHAR(10),
+    org_id VARCHAR(50),
+    join_date DATE NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (student_id, org_id),
+    FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE,
+    FOREIGN KEY (org_id) REFERENCES organizations(org_id) ON DELETE CASCADE
+);
+
+-- Create student_officers table
+CREATE TABLE IF NOT EXISTS student_officers (
+    student_id VARCHAR(10),
+    org_id VARCHAR(50),
+    officer_title VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (student_id, org_id),
+    FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE,
+    FOREIGN KEY (org_id) REFERENCES organizations(org_id) ON DELETE CASCADE
+    -- Note: Officers must be members constraint is enforced in application logic
+);
+
+-- Create indexes for students tables
+CREATE INDEX IF NOT EXISTS idx_students_email ON students(email);
+CREATE INDEX IF NOT EXISTS idx_students_major ON students(major);
+CREATE INDEX IF NOT EXISTS idx_student_orgs_student_id ON student_organizations(student_id);
+CREATE INDEX IF NOT EXISTS idx_student_orgs_org_id ON student_organizations(org_id);
+CREATE INDEX IF NOT EXISTS idx_student_officers_student_id ON student_officers(student_id);
+CREATE INDEX IF NOT EXISTS idx_student_officers_org_id ON student_officers(org_id);
+
 -- Create a view for events with full organization information
 CREATE OR REPLACE VIEW events_with_organizations AS
 SELECT
@@ -94,7 +136,7 @@ LEFT JOIN organizations o ON e.org_id = o.org_id;
 DO $$
 BEGIN
     RAISE NOTICE 'Database schema initialized successfully!';
-    RAISE NOTICE 'Created tables: organizations, events';
+    RAISE NOTICE 'Created tables: organizations, events, students, student_organizations, student_officers';
     RAISE NOTICE 'Created indexes for performance optimization';
     RAISE NOTICE 'Created view: events_with_organizations';
 END $$;

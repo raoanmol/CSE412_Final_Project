@@ -2,7 +2,7 @@
 # Usage: Just type "make <command>" in your terminal
 # Example: make up, make down, make logs, etc.
 
-.PHONY: help up down restart logs logs-backend logs-frontend logs-db build clean status shell-backend shell-frontend shell-db db-load db-connect db-reset
+.PHONY: help up down restart logs logs-backend logs-frontend logs-db build clean status shell-backend shell-frontend shell-db db-load db-load-students db-load-all db-connect db-reset
 
 # Default command when you just type "make"
 help:
@@ -20,9 +20,13 @@ help:
 	@echo "  make shell-backend   - Open a shell inside the backend container"
 	@echo "  make shell-frontend  - Open a shell inside the frontend container"
 	@echo "  make shell-db        - Open a psql shell inside the database container"
-	@echo "  make db-load         - Load scraped events data into the database"
+	@echo "  make db-load         - Manually load scraped events data"
+	@echo "  make db-load-students- Manually generate and load student data (5000 students)"
+	@echo "  make db-load-all     - Manually load events and students"
 	@echo "  make db-connect      - Connect to the database with psql"
 	@echo "  make db-reset        - Reset database (WARNING: deletes all data)"
+	@echo ""
+	@echo "Note: Events and students are auto-loaded on first 'make up' if database is empty"
 
 # Start the application (builds images if needed, then starts containers)
 up:
@@ -91,8 +95,17 @@ shell-db:
 
 # Load scraped events data into the database
 db-load:
-	@echo "Loading data into database..."
+	@echo "Loading events data into database..."
 	docker-compose exec backend python /database/load_data.py
+
+# Generate and load student data into the database
+db-load-students:
+	@echo "Generating and loading student data into database..."
+	docker-compose exec backend python /database/generate_students.py
+
+# Load all data (events + students)
+db-load-all: db-load db-load-students
+	@echo "All data loaded successfully!"
 
 # Connect to the database with psql
 db-connect:

@@ -33,7 +33,11 @@ echo "Checking if database needs to be populated..."
 EVENT_COUNT=$(psql $DATABASE_URL -t -c "SELECT COUNT(*) FROM events;" 2>/dev/null || echo "0")
 EVENT_COUNT=$(echo $EVENT_COUNT | xargs)
 
+STUDENT_COUNT=$(psql $DATABASE_URL -t -c "SELECT COUNT(*) FROM students;" 2>/dev/null || echo "0")
+STUDENT_COUNT=$(echo $STUDENT_COUNT | xargs)
+
 echo "Current events in database: $EVENT_COUNT"
+echo "Current students in database: $STUDENT_COUNT"
 
 JSON_FILE="/data/scraped_events.json"
 
@@ -45,13 +49,27 @@ if [ ! -f "$JSON_FILE" ]; then
 else
     if [ "$EVENT_COUNT" = "0" ]; then
         echo ""
-        echo "Database is empty. Loading data automatically..."
+        echo "Database is empty. Loading event data automatically..."
         python /database/load_data.py
         echo ""
-        echo "✓ Data loaded successfully!"
+        echo "✓ Event data loaded successfully!"
+
+        # After loading events, generate student data
+        echo ""
+        echo "Generating student data..."
+        python /database/generate_students.py
+        echo ""
+        echo "✓ Student data generated successfully!"
+    elif [ "$STUDENT_COUNT" = "0" ]; then
+        echo "✓ Events already loaded, but no students found."
+        echo ""
+        echo "Generating student data..."
+        python /database/generate_students.py
+        echo ""
+        echo "✓ Student data generated successfully!"
     else
-        echo "✓ Database already has data. Skipping automatic load."
-        echo "  (Run 'make db-reset' then 'make db-load' to reload data)"
+        echo "✓ Database already has all data. Skipping automatic load."
+        echo "  (Run 'make db-reset' to reset and reload all data)"
     fi
 fi
 
