@@ -3,11 +3,13 @@ import './App.css'
 import api from './services/api'
 import EventList from './components/EventList'
 import OrganizationList from './components/OrganizationList'
+import OrganizationDetail from './components/OrganizationDetail'
 
 function App() {
   const [backendStatus, setBackendStatus] = useState(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('events')
+  const [selectedOrgId, setSelectedOrgId] = useState(null)
 
   useEffect(() => {
     checkBackendHealth()
@@ -23,6 +25,19 @@ function App() {
       setBackendStatus({ status: 'error', message: 'Failed to connect to backend' })
       setLoading(false)
     }
+  }
+
+  const handleOrganizationClick = (orgId) => {
+    setSelectedOrgId(orgId)
+  }
+
+  const handleBackToList = () => {
+    setSelectedOrgId(null)
+  }
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab)
+    setSelectedOrgId(null) // Reset selected org when switching tabs
   }
 
   return (
@@ -43,20 +58,26 @@ function App() {
       <nav className="tab-navigation">
         <button
           className={`tab-button ${activeTab === 'events' ? 'active' : ''}`}
-          onClick={() => setActiveTab('events')}
+          onClick={() => handleTabChange('events')}
         >
           Events
         </button>
         <button
           className={`tab-button ${activeTab === 'organizations' ? 'active' : ''}`}
-          onClick={() => setActiveTab('organizations')}
+          onClick={() => handleTabChange('organizations')}
         >
           Organizations
         </button>
       </nav>
 
       <main className="App-main">
-        {activeTab === 'events' ? <EventList /> : <OrganizationList />}
+        {activeTab === 'events' ? (
+          <EventList />
+        ) : selectedOrgId ? (
+          <OrganizationDetail orgId={selectedOrgId} onBack={handleBackToList} />
+        ) : (
+          <OrganizationList onOrganizationClick={handleOrganizationClick} />
+        )}
       </main>
     </div>
   )

@@ -1,0 +1,307 @@
+.org-detail-container {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.back-btn {
+  background-color: #8C1D40;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 2rem;
+  transition: background-color 0.2s ease;
+}
+
+.back-btn:hover {
+  background-color: #6a1530;
+}
+
+.org-detail-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.org-detail-header h1 {
+  margin: 0 0 0.5rem 0;
+  font-size: 2.5rem;
+  color: #8C1D40;
+}
+
+.org-login {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #666;
+  font-family: monospace;
+}
+
+.org-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 3rem;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.stat-icon {
+  font-size: 2.5rem;
+}
+
+.stat-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-number {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #8C1D40;
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 0.25rem;
+}
+
+.distributions-section {
+  margin-bottom: 3rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 2rem;
+}
+
+.distribution-card {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.distribution-card h2 {
+  font-size: 1.5rem;
+  color: #333;
+  margin: 0 0 1.5rem 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #8C1D40;
+  text-align: center;
+}
+
+.org-section {
+  margin-bottom: 3rem;
+}
+
+.org-section h2 {
+  font-size: 1.75rem;
+  color: #333;
+  margin: 0 0 1.5rem 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #8C1D40;
+}
+
+.officers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.officer-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.officer-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.officer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+  gap: 0.5rem;
+}
+
+.officer-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #333;
+  flex: 1;
+}
+
+.officer-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.officer-badge.president {
+  background-color: #8C1D40;
+  color: white;
+}
+
+.officer-badge.vice_president {
+  background-color: #FFC627;
+  color: #333;
+}
+
+.officer-badge.treasurer {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.officer-badge.secretary {
+  background-color: #2196F3;
+  color: white;
+}
+
+.officer-badge.events_coordinator {
+  background-color: #FF9800;
+  color: white;
+}
+
+.officer-badge.officer {
+  background-color: #9E9E9E;
+  color: white;
+}
+
+.officer-info {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.officer-info p {
+  margin: 0.5rem 0;
+}
+
+.officer-info strong {
+  color: #333;
+}
+
+.status-active {
+  color: #4CAF50;
+  font-weight: 600;
+}
+
+.status-inactive {
+  color: #f44336;
+  font-weight: 600;
+}
+
+.events-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 1.5rem;
+}
+
+.no-data {
+  text-align: center;
+  padding: 2rem;
+  color: #999;
+  font-size: 1.1rem;
+  background: white;
+  border-radius: 12px;
+}
+
+.org-detail-loading,
+.org-detail-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  text-align: center;
+}
+
+.org-detail-loading {
+  color: #666;
+}
+
+.org-detail-error {
+  color: #d32f2f;
+}
+
+.org-detail-error p {
+  font-size: 1.1rem;
+  margin-bottom: 1.5rem;
+}
+
+.loading-spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #8C1D40;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .org-detail-container {
+    padding: 1rem;
+  }
+
+  .org-detail-header h1 {
+    font-size: 1.75rem;
+  }
+
+  .org-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .distributions-section {
+    grid-template-columns: 1fr;
+  }
+
+  .officers-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .events-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .officer-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .officer-badge {
+    align-self: flex-start;
+  }
+}

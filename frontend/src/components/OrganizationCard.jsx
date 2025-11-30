@@ -1,8 +1,14 @@
 import './OrganizationCard.css'
 
-function OrganizationCard({ organization }) {
+function OrganizationCard({ organization, onClick }) {
+  const handleClick = () => {
+    if (onClick) {
+      onClick(organization.org_id)
+    }
+  }
+
   return (
-    <div className="org-card">
+    <div className="org-card" onClick={handleClick}>
       <div className="org-content">
         <h3 className="org-name">{organization.org_name}</h3>
 

@@ -157,6 +157,27 @@ def get_organizations():
         }), 500
 
 
+@app.route('/api/organizations/<org_id>', methods=['GET'])
+def get_organization_detail(org_id):
+    '''Get detailed information about a specific organization.'''
+    try:
+        org_details = db.get_organization_details(org_id)
+
+        if org_details:
+            return jsonify(org_details)
+        else:
+            return jsonify({
+                'error': 'Organization not found',
+                'message': f'No organization found with ID: {org_id}'
+            }), 404
+
+    except Exception as e:
+        return jsonify({
+            'error': 'Failed to fetch organization details',
+            'message': str(e)
+        }), 500
+
+
 @app.route('/api/stats', methods=['GET'])
 def get_stats():
     '''Get database statistics.'''

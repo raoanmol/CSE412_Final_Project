@@ -282,6 +282,7 @@ def get_organizations():
 def get_organizations_with_stats(search=None, sort_by=None):
     '''
     Get organizations with their statistics (event count, member count, officer count).
+    Optimized version using subqueries to avoid Cartesian product.
 
     Args:
         search (str): Optional search term for organization name
@@ -311,15 +312,26 @@ def get_organizations_with_stats(search=None, sort_by=None):
             o.org_id,
             o.org_login,
             o.org_name,
-            COUNT(DISTINCT e.event_id) as event_count,
-            COUNT(DISTINCT so.student_id) as member_count,
-            COUNT(DISTINCT sof.student_id) as officer_count
+            COALESCE(e.event_count, 0) as event_count,
+            COALESCE(m.member_count, 0) as member_count,
+            COALESCE(of.officer_count, 0) as officer_count
         FROM organizations o
-        LEFT JOIN events e ON o.org_id = e.org_id
-        LEFT JOIN student_organizations so ON o.org_id = so.org_id
-        LEFT JOIN student_officers sof ON o.org_id = sof.org_id
+        LEFT JOIN (
+            SELECT org_id, COUNT(*) as event_count
+            FROM events
+            GROUP BY org_id
+        ) e ON o.org_id = e.org_id
+        LEFT JOIN (
+            SELECT org_id, COUNT(*) as member_count
+            FROM student_organizations
+            GROUP BY org_id
+        ) m ON o.org_id = m.org_id
+        LEFT JOIN (
+            SELECT org_id, COUNT(*) as officer_count
+            FROM student_officers
+            GROUP BY org_id
+        ) of ON o.org_id = of.org_id
         {where_clause}
-        GROUP BY o.org_id, o.org_login, o.org_name
         ORDER BY {order_by}
     '''
 
@@ -327,6 +339,125 @@ def get_organizations_with_stats(search=None, sort_by=None):
         cursor.execute(query, params)
         organizations = cursor.fetchall()
         return [dict(org) for org in organizations]
+
+
+def get_organization_details(org_id):
+    '''
+    Get detailed information about a specific organization.
+
+    Args:
+        org_id (str): Organization ID
+
+    Returns:
+        dict: Organization details including stats, officers, and events
+    '''
+    with get_db_cursor() as cursor:
+        # Get organization basic info and stats
+        cursor.execute('''
+            SELECT
+                o.org_id,
+                o.org_login,
+                o.org_name,
+                COUNT(DISTINCT e.event_id) as event_count,
+                COUNT(DISTINCT so.student_id) as member_count,
+                COUNT(DISTINCT sof.student_id) as officer_count
+            FROM organizations o
+            LEFT JOIN events e ON o.org_id = e.org_id
+            LEFT JOIN student_organizations so ON o.org_id = so.org_id
+            LEFT JOIN student_officers sof ON o.org_id = sof.org_id
+            WHERE o.org_id = %s
+            GROUP BY o.org_id, o.org_login, o.org_name
+        ''', (org_id,))
+
+        org = cursor.fetchone()
+        if not org:
+            return None
+
+        org_data = dict(org)
+
+        # Get officers with their details
+        cursor.execute('''
+            SELECT
+                s.student_id,
+                s.student_name,
+                s.email,
+                s.major,
+                s.year,
+                sof.officer_title,
+                so.join_date,
+                so.is_active
+            FROM student_officers sof
+            JOIN students s ON sof.student_id = s.student_id
+            JOIN student_organizations so ON sof.student_id = so.student_id AND sof.org_id = so.org_id
+            WHERE sof.org_id = %s
+            ORDER BY
+                CASE sof.officer_title
+                    WHEN 'president' THEN 1
+                    WHEN 'vice_president' THEN 2
+                    WHEN 'treasurer' THEN 3
+                    WHEN 'secretary' THEN 4
+                    WHEN 'events_coordinator' THEN 5
+                    ELSE 6
+                END,
+                s.student_name
+        ''', (org_id,))
+
+        org_data['officers'] = [dict(officer) for officer in cursor.fetchall()]
+
+        # Get events for this organization
+        cursor.execute('''
+            SELECT
+                e.event_id,
+                e.event_uid,
+                e.event_name,
+                e.event_description,
+                e.event_start_datetime,
+                e.event_end_datetime,
+                e.original_date_string,
+                e.category,
+                e.location_text,
+                e.online_link,
+                e.event_type,
+                e.attendees,
+                e.picture_url,
+                e.price_range,
+                e.button_label,
+                e.badges,
+                e.event_url
+            FROM events e
+            WHERE e.org_id = %s
+            ORDER BY e.event_start_datetime DESC NULLS LAST, e.event_id
+        ''', (org_id,))
+
+        org_data['events'] = [dict(event) for event in cursor.fetchall()]
+
+        # Get event type distribution
+        cursor.execute('''
+            SELECT
+                event_type,
+                COUNT(*) as count
+            FROM events
+            WHERE org_id = %s AND event_type IS NOT NULL
+            GROUP BY event_type
+            ORDER BY count DESC
+        ''', (org_id,))
+
+        org_data['event_type_distribution'] = [dict(row) for row in cursor.fetchall()]
+
+        # Get event category distribution
+        cursor.execute('''
+            SELECT
+                category,
+                COUNT(*) as count
+            FROM events
+            WHERE org_id = %s AND category IS NOT NULL
+            GROUP BY category
+            ORDER BY count DESC
+        ''', (org_id,))
+
+        org_data['category_distribution'] = [dict(row) for row in cursor.fetchall()]
+
+        return org_data
 
 
 def get_database_stats():

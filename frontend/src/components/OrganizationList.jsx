@@ -3,7 +3,7 @@ import OrganizationCard from './OrganizationCard'
 import api from '../services/api'
 import './OrganizationList.css'
 
-function OrganizationList() {
+function OrganizationList({ onOrganizationClick }) {
   const [organizations, setOrganizations] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -106,7 +106,11 @@ function OrganizationList() {
         <>
           <div className="org-grid">
             {organizations.map((org) => (
-              <OrganizationCard key={org.org_id} organization={org} />
+              <OrganizationCard
+                key={org.org_id}
+                organization={org}
+                onClick={onOrganizationClick}
+              />
             ))}
           </div>
 
