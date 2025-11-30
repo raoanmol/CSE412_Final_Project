@@ -178,6 +178,78 @@ def get_organization_detail(org_id):
         }), 500
 
 
+@app.route('/api/events', methods=['POST'])
+def create_event():
+    '''Create a new event.'''
+    try:
+        event_data = request.get_json()
+
+        # Validate required fields
+        required_fields = ['event_name', 'category', 'event_type', 'org_id']
+        for field in required_fields:
+            if not event_data.get(field):
+                return jsonify({
+                    'error': 'Validation error',
+                    'message': f'Missing required field: {field}'
+                }), 400
+
+        created_event = db.create_event(event_data)
+        return jsonify(created_event), 201
+
+    except Exception as e:
+        return jsonify({
+            'error': 'Failed to create event',
+            'message': str(e)
+        }), 500
+
+
+@app.route('/api/events/<event_id>', methods=['PUT'])
+def update_event(event_id):
+    '''Update an existing event.'''
+    try:
+        event_data = request.get_json()
+
+        updated_event = db.update_event(event_id, event_data)
+
+        if updated_event:
+            return jsonify(updated_event), 200
+        else:
+            return jsonify({
+                'error': 'Event not found',
+                'message': f'No event found with ID: {event_id}'
+            }), 404
+
+    except Exception as e:
+        return jsonify({
+            'error': 'Failed to update event',
+            'message': str(e)
+        }), 500
+
+
+@app.route('/api/events/<event_id>', methods=['DELETE'])
+def delete_event(event_id):
+    '''Delete an event.'''
+    try:
+        deleted = db.delete_event(event_id)
+
+        if deleted:
+            return jsonify({
+                'message': 'Event deleted successfully',
+                'event_id': event_id
+            }), 200
+        else:
+            return jsonify({
+                'error': 'Event not found',
+                'message': f'No event found with ID: {event_id}'
+            }), 404
+
+    except Exception as e:
+        return jsonify({
+            'error': 'Failed to delete event',
+            'message': str(e)
+        }), 500
+
+
 @app.route('/api/stats', methods=['GET'])
 def get_stats():
     '''Get database statistics.'''

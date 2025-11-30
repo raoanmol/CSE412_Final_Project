@@ -500,6 +500,127 @@ def get_database_stats():
     }
 
 
+def create_event(event_data):
+    '''
+    Create a new event in the database.
+
+    Args:
+        event_data (dict): Event data including all required fields
+
+    Returns:
+        dict: Created event data with generated event_id
+    '''
+    import uuid
+    import hashlib
+    import random
+
+    # Generate unique IDs
+    event_id = str(random.randint(400000, 999999))
+    event_uid = hashlib.md5(f"{event_data.get('event_name')}{event_data.get('org_id')}{uuid.uuid4()}".encode()).hexdigest()
+
+    query = '''
+        INSERT INTO events (
+            event_id, event_uid, event_name, event_description, event_start_datetime,
+            event_end_datetime, category, location_text, online_link,
+            event_type, attendees, picture_url, price_range, org_id
+        ) VALUES (
+            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+        ) RETURNING event_id
+    '''
+
+    with get_db_cursor() as cursor:
+        cursor.execute(query, (
+            event_id,
+            event_uid,
+            event_data.get('event_name'),
+            event_data.get('event_description'),
+            event_data.get('event_start_datetime'),
+            event_data.get('event_end_datetime'),
+            event_data.get('category'),
+            event_data.get('location_text'),
+            event_data.get('online_link'),
+            event_data.get('event_type'),
+            event_data.get('attendees', 0),
+            event_data.get('picture_url', 'https://cdn.shopify.com/s/files/1/1095/6418/files/ASU-sun-devils-new-logo.jpg?v=1481918145'),
+            event_data.get('price_range', 'FREE'),
+            event_data.get('org_id')
+        ))
+
+        result = cursor.fetchone()
+        created_event_id = result['event_id']
+
+        # Fetch and return the created event
+        return get_event_by_id(created_event_id)
+
+
+def update_event(event_id, event_data):
+    '''
+    Update an existing event in the database.
+
+    Args:
+        event_id (str): Event ID to update
+        event_data (dict): Updated event data
+
+    Returns:
+        dict: Updated event data or None if not found
+    '''
+    query = '''
+        UPDATE events SET
+            event_name = %s,
+            event_description = %s,
+            event_start_datetime = %s,
+            event_end_datetime = %s,
+            category = %s,
+            location_text = %s,
+            online_link = %s,
+            event_type = %s,
+            attendees = %s,
+            picture_url = %s,
+            price_range = %s
+        WHERE event_id = %s
+        RETURNING event_id
+    '''
+
+    with get_db_cursor() as cursor:
+        cursor.execute(query, (
+            event_data.get('event_name'),
+            event_data.get('event_description'),
+            event_data.get('event_start_datetime'),
+            event_data.get('event_end_datetime'),
+            event_data.get('category'),
+            event_data.get('location_text'),
+            event_data.get('online_link'),
+            event_data.get('event_type'),
+            event_data.get('attendees', 0),
+            event_data.get('picture_url', 'https://cdn.shopify.com/s/files/1/1095/6418/files/ASU-sun-devils-new-logo.jpg?v=1481918145'),
+            event_data.get('price_range', 'FREE'),
+            event_id
+        ))
+
+        result = cursor.fetchone()
+        if result:
+            return get_event_by_id(event_id)
+        return None
+
+
+def delete_event(event_id):
+    '''
+    Delete an event from the database.
+
+    Args:
+        event_id (str): Event ID to delete
+
+    Returns:
+        bool: True if deleted successfully, False otherwise
+    '''
+    query = 'DELETE FROM events WHERE event_id = %s RETURNING event_id'
+
+    with get_db_cursor() as cursor:
+        cursor.execute(query, (event_id,))
+        result = cursor.fetchone()
+        return result is not None
+
+
 def check_database_connection():
     '''
     Check if database connection is working.

@@ -157,6 +157,48 @@
   background: #6d1029;
 }
 
+.event-admin-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #eee;
+}
+
+.admin-edit-btn,
+.admin-delete-btn {
+  flex: 1;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.admin-edit-btn {
+  background-color: #00A3E0;
+  color: white;
+}
+
+.admin-edit-btn:hover {
+  background-color: #0082b3;
+}
+
+.admin-delete-btn {
+  background-color: #c62828;
+  color: white;
+}
+
+.admin-delete-btn:hover {
+  background-color: #8e0000;
+}
+
 @media (max-width: 768px) {
   .event-title {
     font-size: 1.1rem;

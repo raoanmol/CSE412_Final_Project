@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
 import EventCard from './EventCard'
+import EventFormModal from './EventFormModal'
+import UndoNotification from './UndoNotification'
 import api from '../services/api'
 import './OrganizationDetail.css'
 
@@ -8,9 +10,14 @@ function OrganizationDetail({ orgId, onBack }) {
   const [organization, setOrganization] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [categories, setCategories] = useState([])
+  const [showModal, setShowModal] = useState(false)
+  const [editingEvent, setEditingEvent] = useState(null)
+  const [undoAction, setUndoAction] = useState(null)
 
   useEffect(() => {
     fetchOrganizationDetails()
+    fetchCategories()
   }, [orgId])
 
   const fetchOrganizationDetails = async () => {
@@ -25,6 +32,151 @@ function OrganizationDetail({ orgId, onBack }) {
       console.error('Error fetching organization details:', err)
       setError('Failed to load organization details. Please try again.')
       setLoading(false)
+    }
+  }
+
+  const fetchCategories = async () => {
+    try {
+      const response = await api.get('/categories')
+      setCategories(response.data.categories || [])
+    } catch (err) {
+      console.error('Error fetching categories:', err)
+    }
+  }
+
+  const handleAddEvent = () => {
+    setEditingEvent(null)
+    setShowModal(true)
+  }
+
+  const handleEditEvent = (event) => {
+    setEditingEvent(event)
+    setShowModal(true)
+  }
+
+  const handleDeleteEvent = async (event) => {
+    // Store the event and its index for undo
+    const eventIndex = organization.events.findIndex(e => e.event_id === event.event_id)
+    const deletedEvent = { ...event }
+
+    setUndoAction({
+      type: 'delete',
+      event: deletedEvent,
+      index: eventIndex,
+      message: `Event "${event.event_name}" will be deleted`
+    })
+
+    // Optimistically remove from UI
+    setOrganization(prev => ({
+      ...prev,
+      events: prev.events.filter(e => e.event_id !== event.event_id),
+      event_count: prev.event_count - 1
+    }))
+  }
+
+  const handleSaveEvent = (savedEvent, action) => {
+    if (action === 'create') {
+      // Add to organization
+      setOrganization(prev => {
+        // Store for undo using the current state
+        setUndoAction({
+          type: 'create',
+          event: savedEvent,
+          message: `Event "${savedEvent.event_name}" created`
+        })
+
+        return {
+          ...prev,
+          events: [savedEvent, ...prev.events],
+          event_count: prev.event_count + 1
+        }
+      })
+    } else if (action === 'update') {
+      // Update in organization
+      setOrganization(prev => {
+        const eventIndex = prev.events.findIndex(e => e.event_id === savedEvent.event_id)
+        const originalEvent = prev.events[eventIndex]
+
+        // Store for undo using the current state
+        setUndoAction({
+          type: 'update',
+          event: savedEvent,
+          originalEvent: originalEvent,
+          index: eventIndex,
+          message: `Event "${savedEvent.event_name}" updated`
+        })
+
+        return {
+          ...prev,
+          events: prev.events.map(e =>
+            e.event_id === savedEvent.event_id ? savedEvent : e
+          )
+        }
+      })
+    }
+  }
+
+  const handleUndoAction = async () => {
+    if (!undoAction) return
+
+    try {
+      if (undoAction.type === 'delete') {
+        // Restore the deleted event
+        const newEvents = [...organization.events]
+        newEvents.splice(undoAction.index, 0, undoAction.event)
+
+        setOrganization(prev => ({
+          ...prev,
+          events: newEvents,
+          event_count: prev.event_count + 1
+        }))
+      } else if (undoAction.type === 'create') {
+        // Remove the created event
+        await api.delete(`/events/${undoAction.event.event_id}`)
+
+        setOrganization(prev => ({
+          ...prev,
+          events: prev.events.filter(e => e.event_id !== undoAction.event.event_id),
+          event_count: prev.event_count - 1
+        }))
+      } else if (undoAction.type === 'update') {
+        // Restore original event
+        await api.put(`/events/${undoAction.originalEvent.event_id}`, undoAction.originalEvent)
+
+        setOrganization(prev => ({
+          ...prev,
+          events: prev.events.map(e =>
+            e.event_id === undoAction.originalEvent.event_id ? undoAction.originalEvent : e
+          )
+        }))
+      }
+
+      setUndoAction(null)
+    } catch (err) {
+      console.error('Error undoing action:', err)
+      // Refresh to get accurate state
+      fetchOrganizationDetails()
+      setUndoAction(null)
+    }
+  }
+
+  const handleCompleteAction = async () => {
+    if (!undoAction) return
+
+    try {
+      if (undoAction.type === 'delete') {
+        // Actually delete from database
+        await api.delete(`/events/${undoAction.event.event_id}`)
+      }
+      // For create and update, changes are already in database
+      setUndoAction(null)
+
+      // Refresh distributions after changes
+      fetchOrganizationDetails()
+    } catch (err) {
+      console.error('Error completing action:', err)
+      fetchOrganizationDetails()
+      setUndoAction(null)
     }
   }
 
@@ -218,17 +370,49 @@ function OrganizationDetail({ orgId, onBack }) {
 
       {/* Events Section */}
       <div className="org-section">
-        <h2>Events ({organization.events?.length || 0})</h2>
+        <div className="section-header">
+          <h2>Events ({organization.events?.length || 0})</h2>
+          <button onClick={handleAddEvent} className="add-event-btn">
+            + Add Event
+          </button>
+        </div>
         {organization.events && organization.events.length > 0 ? (
           <div className="events-grid">
             {organization.events.map((event) => (
-              <EventCard key={event.event_id} event={event} />
+              <EventCard
+                key={event.event_id}
+                event={event}
+                adminMode={true}
+                onEdit={handleEditEvent}
+                onDelete={handleDeleteEvent}
+              />
             ))}
           </div>
         ) : (
           <p className="no-data">No events found for this organization.</p>
         )}
       </div>
+
+      {/* Event Form Modal */}
+      {showModal && (
+        <EventFormModal
+          event={editingEvent}
+          orgId={orgId}
+          categories={categories}
+          onClose={() => setShowModal(false)}
+          onSave={handleSaveEvent}
+        />
+      )}
+
+      {/* Undo Notification */}
+      {undoAction && (
+        <UndoNotification
+          message={undoAction.message}
+          onUndo={handleUndoAction}
+          onComplete={handleCompleteAction}
+          duration={5000}
+        />
+      )}
     </div>
   )
 }

@@ -1,0 +1,86 @@
+.undo-notification {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  background: #333;
+  color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  min-width: 350px;
+  z-index: 1001;
+  opacity: 0;
+  transform: translateY(100px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.undo-notification.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.undo-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  gap: 1rem;
+}
+
+.undo-message {
+  font-size: 0.95rem;
+  flex: 1;
+}
+
+.undo-btn {
+  background: transparent;
+  border: 2px solid #FFC627;
+  color: #FFC627;
+  padding: 0.5rem 1.5rem;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.undo-btn:hover {
+  background: #FFC627;
+  color: #333;
+}
+
+.undo-progress {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.undo-progress-bar {
+  height: 100%;
+  background: #FFC627;
+  transition: width 0.1s linear;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .undo-notification {
+    bottom: 1rem;
+    right: 1rem;
+    left: 1rem;
+    min-width: auto;
+  }
+
+  .undo-content {
+    padding: 0.75rem 1rem;
+  }
+
+  .undo-message {
+    font-size: 0.85rem;
+  }
+
+  .undo-btn {
+    padding: 0.4rem 1rem;
+    font-size: 0.8rem;
+  }
+}

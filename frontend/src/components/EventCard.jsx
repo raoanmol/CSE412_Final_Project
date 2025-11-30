@@ -1,6 +1,6 @@
 import './EventCard.css'
 
-function EventCard({ event }) {
+function EventCard({ event, adminMode = false, onEdit, onDelete }) {
   // Format datetime for display
   const formatDateTime = (startDatetime, endDatetime, originalDateString) => {
     if (startDatetime) {
@@ -53,8 +53,22 @@ function EventCard({ event }) {
     window.open(zoomLink, '_blank', 'noopener,noreferrer')
   }
 
+  const handleEdit = (e) => {
+    e.stopPropagation()
+    if (onEdit) {
+      onEdit(event)
+    }
+  }
+
+  const handleDelete = (e) => {
+    e.stopPropagation()
+    if (onDelete) {
+      onDelete(event)
+    }
+  }
+
   return (
-    <div className="event-card" onClick={handleEventClick}>
+    <div className="event-card" onClick={!adminMode ? handleEventClick : undefined}>
       <div className="event-image">
         {event.picture_url && (
           <img
@@ -119,12 +133,22 @@ function EventCard({ event }) {
               {event.attendees} attendees
             </span>
           )}
-          {event.button_label && (
+          {event.button_label && !adminMode && (
             <button className="event-action-btn">
               {event.button_label}
             </button>
           )}
         </div>
+        {adminMode && (
+          <div className="event-admin-actions">
+            <button onClick={handleEdit} className="admin-edit-btn" title="Edit Event">
+              ✏️ Edit
+            </button>
+            <button onClick={handleDelete} className="admin-delete-btn" title="Delete Event">
+              🗑️ Delete
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
